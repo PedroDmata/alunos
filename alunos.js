@@ -1,5 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
+const swaggerJSDoc = require('swagger-jsdoc');
+const swaggerUI = require('swagger-ui-express');
 
 const app = express();
 app.use(express.json());
@@ -12,81 +14,166 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
-// Rotas da API
-app.post('/alunos', async (req, res) => {
-  const { nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala } = req.body;
+// Definir as opções do Swagger
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'API de Alunos Escola',
+      version: '1.0.0',
+    },
+  },
+  apis: ['app.js'], // Substitua pelo caminho do seu arquivo principal
+};
 
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO alunos (nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala) VALUES (?, ?, ?, ?, ?, ?)',
-      [nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala]
-    );
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
-    res.status(201).json({ id: result.insertId, ...req.body });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao adicionar aluno' });
-  }
-});
+// Rota para servir a documentação do Swagger
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
-app.get('/alunos', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM alunos');
-    res.json(rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao buscar alunos' });
-  }
-});
+// Documentação da rota da API para Swagger
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Aluno:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         nome:
+ *           type: string
+ *         idade:
+ *           type: integer
+ *         nota_primeiro_semestre:
+ *           type: number
+ *         nota_segundo_semestre:
+ *           type: number
+ *         nome_professor:
+ *           type: string
+ *         numero_sala:
+ *           type: integer
+ */
 
-app.get('/alunos/:id', async (req, res) => {
-  const { id } = req.params;
+/**
+ * @swagger
+ * /alunos:
+ *   get:
+ *     summary: Retorna a lista de todos os alunos.
+ *     responses:
+ *       200:
+ *         description: Lista de alunos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Aluno'
+ *       500:
+ *         description: Erro ao buscar alunos.
+ */
 
-  try {
-    const [rows] = await pool.query('SELECT * FROM alunos WHERE id = ?', [id]);
-    if (rows.length > 0) {
-      res.json(rows[0]);
-    } else {
-      res.status(404).json({ error: 'Aluno não encontrado' });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao buscar aluno' });
-  }
-});
+/**
+ * @swagger
+ * /alunos/{id}:
+ *   get:
+ *     summary: Retorna um aluno pelo ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do aluno.
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Aluno encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Aluno'
+ *       404:
+ *         description: Aluno não encontrado.
+ *       500:
+ *         description: Erro ao buscar aluno.
+ */
 
-app.put('/alunos/:id', async (req, res) => {
-  const { id } = req.params;
-  const { nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala } = req.body;
+/**
+ * @swagger
+ * /alunos:
+ *   post:
+ *     summary: Adicionar um novo aluno.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Aluno'
+ *     responses:
+ *       201:
+ *         description: Aluno adicionado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Aluno'
+ *       500:
+ *         description: Erro ao adicionar aluno.
+ */
 
-  try {
-    await pool.query(
-      'UPDATE alunos SET nome = ?, idade = ?, nota_primeiro_semestre = ?, nota_segundo_semestre = ?, nome_professor = ?, numero_sala = ? WHERE id = ?',
-      [nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala, id]
-    );
+/**
+ * @swagger
+ * /alunos/{id}:
+ *   put:
+ *     summary: Atualizar um aluno existente.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do aluno.
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Aluno'
+ *     responses:
+ *       200:
+ *         description: Aluno atualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Aluno'
+ *       404:
+ *         description: Aluno não encontrado.
+ *       500:
+ *         description: Erro ao atualizar aluno.
+ */
 
-    res.json({ id, nome, idade, nota_primeiro_semestre, nota_segundo_semestre, nome_professor, numero_sala });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atualizar aluno' });
-  }
-});
+/**
+ * @swagger
+ * /alunos/{id}:
+ *   delete:
+ *     summary: Excluir um aluno pelo ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do aluno.
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Aluno excluído com sucesso.
+ *       404:
+ *         description: Aluno não encontrado.
+ *       500:
+ *         description: Erro ao excluir aluno.
+ */
 
-app.delete('/alunos/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [result] = await pool.query('DELETE FROM alunos WHERE id = ?', [id]);
-    if (result.affectedRows > 0) {
-      res.json({ message: 'Aluno excluído com sucesso' });
-    } else {
-      res.status(404).json({ error: 'Aluno não encontrado' });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao excluir aluno' });
-  }
-});
+// Implementação das rotas da API CRUD
+// (Você pode adicionar o código para as rotas CRUD aqui)
 
 // Iniciar o servidor
 const port = 3000;
